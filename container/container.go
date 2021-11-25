@@ -25,9 +25,9 @@ func run() {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWUTS,
+		Cloneflags: syscall.CLONE_NEWUTS |
+			syscall.CLONE_NEWPID, // ==> new process ID given with isolated from host
 	}
-	must(syscall.Sethostname([]byte("container")))
 	must(cmd.Run())
 }
 
@@ -37,10 +37,23 @@ func child() {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWUTS,
-	}
+
+	must(syscall.Sethostname([]byte("container")))
+	/**
+	PART 2
+	BEGIN
+	*/
+	must(syscall.Chroot("/home/kmc/chroot-ubuntu")) // container image
+	must(syscall.Chdir("/"))
+
+	must(syscall.Mount("proc", "proc", "proc", 0, ""))
+	/**
+	PART 2
+	END
+	*/
 	must(cmd.Run())
+
+	must(syscall.Unmount("proc", 0))
 }
 
 func must(err error) {
